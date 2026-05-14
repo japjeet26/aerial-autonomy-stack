@@ -6,6 +6,7 @@ set -e
 # Set up the simulation
 AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot
 HEADLESS="${HEADLESS:-false}" # Options: true, false (default)
+USE_GPU="${USE_GPU:-auto}" # Options: auto (default), true, false
 CAMERA="${CAMERA:-true}" # Options: true (default), false
 LIDAR="${LIDAR:-true}" # Options: true (default), false 
 #
@@ -36,14 +37,24 @@ AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
 SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
 GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
-# Detect the environment (Ubuntu/GNOME, WSL, etc.)
-if command -v gnome-terminal >/dev/null 2>&1 && [ -n "$XDG_CURRENT_DESKTOP" ]; then
+# Resolve GPU usage
+if [[ "$USE_GPU" == "auto" ]]; then
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    USE_GPU="true"
+  else
+    USE_GPU="false"
+  fi
+fi
+
+# Detect the environment (Ubuntu/GNOME, WSL, or headless server)
+if [[ "$HEADLESS" == "true" ]]; then
+  DESK_ENV="headless"
+elif command -v gnome-terminal >/dev/null 2>&1 && [ -n "$XDG_CURRENT_DESKTOP" ]; then
   DESK_ENV="gnome"
 elif grep -qEi "(Microsoft|WSL)" /proc/version &> /dev/null; then
   DESK_ENV="wsl"
 else
-  echo "Unsupported environment" 
-  exit 1
+  DESK_ENV="headless"
 fi
 echo "Desktop environment: $DESK_ENV"
 
@@ -71,8 +82,10 @@ if [[ "$HITL" == "false" ]]; then
 fi
 
 # Grant access to the X server
-if command -v xhost >/dev/null 2>&1; then 
-  xhost +local:docker
+if [[ "$DESK_ENV" != "headless" ]]; then
+  if command -v xhost >/dev/null 2>&1; then 
+    xhost +local:docker
+  fi
 fi
 
 # WSL-specific options
@@ -80,18 +93,23 @@ WSL_OPTS="--env WAYLAND_DISPLAY=$WAYLAND_DISPLAY --env PULSE_SERVER=$PULSE_SERVE
 --env MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA --env LD_LIBRARY_PATH=/usr/lib/wsl/lib --env LIBGL_ALWAYS_SOFTWARE=0"
 
 # Get display dimensions
-resolution=$(xrandr 2>/dev/null | grep " connected primary" | grep -oE '[0-9]+x[0-9]+' | head -1)
-if [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
-  resolution=$(xrandr 2>/dev/null | grep " connected" | grep -oE '[0-9]+x[0-9]+' | head -1) # Fallback
-fi
-if [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
-  SCREEN_WIDTH=$(echo "$resolution" | cut -d'x' -f1)
-  SCREEN_HEIGHT=$(echo "$resolution" | cut -d'x' -f2)
-  echo "Detected display: ${SCREEN_WIDTH}x${SCREEN_HEIGHT}"
+if [[ "$DESK_ENV" != "headless" ]]; then
+  resolution=$(xrandr 2>/dev/null | grep " connected primary" | grep -oE '[0-9]+x[0-9]+' | head -1)
+  if [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
+    resolution=$(xrandr 2>/dev/null | grep " connected" | grep -oE '[0-9]+x[0-9]+' | head -1) # Fallback
+  fi
+  if [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
+    SCREEN_WIDTH=$(echo "$resolution" | cut -d'x' -f1)
+    SCREEN_HEIGHT=$(echo "$resolution" | cut -d'x' -f2)
+    echo "Detected display: ${SCREEN_WIDTH}x${SCREEN_HEIGHT}"
+  else
+    SCREEN_WIDTH=1920
+    SCREEN_HEIGHT=1080
+    echo "Fallback resolution to ${SCREEN_WIDTH}x${SCREEN_HEIGHT} default"
+  fi
 else
   SCREEN_WIDTH=1920
   SCREEN_HEIGHT=1080
-  echo "Fallback resolution to ${SCREEN_WIDTH}x${SCREEN_HEIGHT} default"
 fi
 
 # Function to calculate terminal position based on ID
@@ -113,11 +131,16 @@ XTERM_CONFIG_ARGS=(
     Ctrl Shift <Key>V: insert-selection(CLIPBOARD)'
 )
 
+GPU_OPTS=""
+if [[ "$USE_GPU" == "true" ]]; then
+  GPU_OPTS="--gpus all --env NVIDIA_DRIVER_CAPABILITIES=all --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia"
+fi
+
 # Launch the simulation container
-DOCKER_CMD="docker run -it --rm \
-  --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
-  --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
-  --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
+if [[ "$DESK_ENV" == "headless" ]]; then
+  DOCKER_CMD="docker run -d -t --rm \
+  --env GST_DEBUG=3 \
+  $GPU_OPTS \
   --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR \
   --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env WORLD=$WORLD \
   --env SIMULATED_TIME=true --env RTF=$RTF --env START_AS_PAUSED=$START_AS_PAUSED \
@@ -127,6 +150,21 @@ DOCKER_CMD="docker run -it --rm \
   --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
   --privileged \
   --name $SIM_CONT_NAME"
+else
+  DOCKER_CMD="docker run -it --rm \
+  --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri \
+  --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
+  $GPU_OPTS \
+  --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR \
+  --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env WORLD=$WORLD \
+  --env SIMULATED_TIME=true --env RTF=$RTF --env START_AS_PAUSED=$START_AS_PAUSED \
+  --env SIM_SUBNET=$SIM_SUBNET --env GROUND_ID=$GROUND_ID \
+  --env GND_CONTAINER=$GND_CONTAINER \
+  --env ROS_DOMAIN_ID=$SIM_ID \
+  --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
+  --privileged \
+  --name $SIM_CONT_NAME"
+fi
 # Configure network for HITL or SITL
 if [[ "$HITL" == "true" ]]; then
   DOCKER_CMD="$DOCKER_CMD --net=host"
@@ -138,19 +176,23 @@ if [[ "$DESK_ENV" == "wsl" ]]; then
   DOCKER_CMD="$DOCKER_CMD $WSL_OPTS"
 fi
 DOCKER_CMD="$DOCKER_CMD ${DEV_SIM_OPTS} simulation-image"
-calculate_terminal_position 0
-xterm "${XTERM_CONFIG_ARGS[@]}" -title "Simulation" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
-  -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+if [[ "$DESK_ENV" == "headless" ]]; then
+  eval "$DOCKER_CMD" >/dev/null
+else
+  calculate_terminal_position 0
+  xterm "${XTERM_CONFIG_ARGS[@]}" -title "Simulation" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
+    -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+fi
 
 if [[ "$HITL" == "false" ]]; then
 
   if [[ "$GND_CONTAINER" == "true" ]]; then
     sleep 1.0 # Limit resource usage
     # Launch the ground container
-    DOCKER_CMD="docker run -it --rm \
-      --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
-      --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
-      --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
+    if [[ "$DESK_ENV" == "headless" ]]; then
+      DOCKER_CMD="docker run -d -t --rm \
+      --env GST_DEBUG=3 \
+      $GPU_OPTS \
       --env HEADLESS=$HEADLESS \
       --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS \
       --env SIMULATED_TIME=true \
@@ -159,14 +201,32 @@ if [[ "$HITL" == "false" ]]; then
       --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.${GROUND_ID} \
       --privileged \
       --name $GND_CONT_NAME"
+    else
+      DOCKER_CMD="docker run -it --rm \
+      --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri \
+      --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
+      $GPU_OPTS \
+      --env HEADLESS=$HEADLESS \
+      --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS \
+      --env SIMULATED_TIME=true \
+      --env ROS_DOMAIN_ID=$GROUND_ID \
+      --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
+      --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.${GROUND_ID} \
+      --privileged \
+      --name $GND_CONT_NAME"
+    fi
     # Add WSL-specific options and complete the command
     if [[ "$DESK_ENV" == "wsl" ]]; then
       DOCKER_CMD="$DOCKER_CMD $WSL_OPTS"
     fi
     DOCKER_CMD="$DOCKER_CMD ${DEV_GND_OPTS} ground-image"
-    calculate_terminal_position 1
-    xterm "${XTERM_CONFIG_ARGS[@]}" -title "Ground" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
-      -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+    if [[ "$DESK_ENV" == "headless" ]]; then
+      eval "$DOCKER_CMD" >/dev/null
+    else
+      calculate_terminal_position 1
+      xterm "${XTERM_CONFIG_ARGS[@]}" -title "Ground" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
+        -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+    fi
   fi
 
   # Initialize a counter for the drone IDs
@@ -180,10 +240,10 @@ if [[ "$HITL" == "false" ]]; then
     for i in $(seq 1 $num_drones); do
       sleep 1.0 # Limit resource usage
       local NAME_AIRCRAFT_CNT="aircraft-container-inst${INSTANCE}_${DRONE_ID}"
-      DOCKER_CMD="docker run -it --rm \
-        --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
-        --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
-        --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
+      if [[ "$DESK_ENV" == "headless" ]]; then
+        DOCKER_CMD="docker run -d -t --rm \
+        --env GST_DEBUG=3 \
+        $GPU_OPTS \
         --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR \
         --env DRONE_TYPE=$drone_type --env DRONE_ID=$DRONE_ID \
         --env SIMULATED_TIME=true \
@@ -193,14 +253,33 @@ if [[ "$HITL" == "false" ]]; then
         --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.$DRONE_ID \
         --privileged \
         --name $NAME_AIRCRAFT_CNT"
+      else
+        DOCKER_CMD="docker run -it --rm \
+        --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri \
+        --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
+        $GPU_OPTS \
+        --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR \
+        --env DRONE_TYPE=$drone_type --env DRONE_ID=$DRONE_ID \
+        --env SIMULATED_TIME=true \
+        --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \
+        --env GND_CONTAINER=$GND_CONTAINER \
+        --env ROS_DOMAIN_ID=$DRONE_ID \
+        --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.$DRONE_ID \
+        --privileged \
+        --name $NAME_AIRCRAFT_CNT"
+      fi
       # Add WSL-specific options and complete the command
       if [[ "$DESK_ENV" == "wsl" ]]; then
         DOCKER_CMD="$DOCKER_CMD $WSL_OPTS"
       fi
       DOCKER_CMD="$DOCKER_CMD ${DEV_AIR_OPTS} aircraft-image"
-      calculate_terminal_position $(($DRONE_ID + 1))
-      xterm "${XTERM_CONFIG_ARGS[@]}" -title "${drone_type^^} $DRONE_ID" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
-        -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+      if [[ "$DESK_ENV" == "headless" ]]; then
+        eval "$DOCKER_CMD" >/dev/null
+      else
+        calculate_terminal_position $(($DRONE_ID + 1))
+        xterm "${XTERM_CONFIG_ARGS[@]}" -title "${drone_type^^} $DRONE_ID" -fa Monospace -fs $FONT_SIZE -bg black -fg white \
+          -geometry "${TERM_COLS}x${TERM_ROWS}+${X_POS}+${Y_POS}" -hold -e bash -c "$DOCKER_CMD" &
+      fi
       DRONE_ID=$((DRONE_ID + 1))
     done
   }
@@ -249,8 +328,10 @@ cleanup() {
   fi
   docker network rm $SIM_NET_NAME 2>/dev/null && echo "Removed $SIM_NET_NAME" || echo "Network $SIM_NET_NAME not found or already removed"
   docker network rm $AIR_NET_NAME 2>/dev/null && echo "Removed $AIR_NET_NAME" || echo "Network $AIR_NET_NAME not found or already removed"
-  if command -v xhost >/dev/null 2>&1; then
-    xhost -local:docker >/dev/null
+  if [[ "$DESK_ENV" != "headless" ]]; then
+    if command -v xhost >/dev/null 2>&1; then
+      xhost -local:docker >/dev/null
+    fi
   fi
   echo "All-clear"
 }
