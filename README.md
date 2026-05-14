@@ -362,51 +362,6 @@ done
 > 
 > To end the simulation, in each terminal detach Tmux with `Ctrl + b`, then `d`; kill all lingering processes with `tmux kill-server && pkill -f gz`
 > </details>
-<!-- 
-> <details>
-> <summary>Use <b>Tmux shortcuts</b> to navigate windows and panes in Xterm <i>(click to expand)</i></summary>
->
-> ```sh
-> Ctrl + b, then n, p                   # Move between Tmux windows 
-> Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
-> Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
-> Space                                 # Start selecting when in copy mode (move with arrow keys)
-> y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
-> q                                     # Exit copy mode
-> Ctrl + b, then "                      # Split a Tmux window horizontally
-> Ctrl + b, then %                      # Split a Tmux window vertically
-> Ctrl + b, then d                      # Detach Tmux
-> ```
-> ```sh
-> tmux list-sessions                    # List all sessions
-> tmux attach-session -t [session_name] # Reattach a session
-> tmux kill-session -t [session_name]   # Kill a session
-> tmux kill-server                      # Kill all sessions
-> ```
-> </details>
-> <details>
-> <summary>Periodically run <b>Docker cleanups</b> <i>(click to expand)</i></summary>
->
-> ```sh
-> docker ps -a                          # List containers
-> docker stop $(docker ps -q)           # Stop all containers
-> docker container prune -f             # Remove all stopped containers
-> ```
-> ```sh
-> docker network ls                     # List docker networks
-> docker network rm <network_name>      # Remove a specific network
-> docker network prune -f               # Remove all unused networks
-> docker system df                      # Check disk usage by images and cache
-> docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
-> ```
-> ```sh
-> docker images                         # List images
-> docker image prune                    # Remove untagged images
-> docker rmi <image_name_or_id>         # Remove a specific image
-> docker builder prune                  # Clear all dangling cache
-> ```
-> </details>
--->
 
 ![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
 
@@ -554,23 +509,23 @@ python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
 python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz
 ```
 
-<!--
-WIP:
-python3 gym_run.py --mode learn                       # Train and test a PPO agent
-
-Debug with:
-docker exec -it simulation-container-inst0 tmux attach
-docker exec -it aircraft-container-inst0_1 tmux attach
-
-Clean up with:
-docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
--->
-
 ![waves](https://github.com/user-attachments/assets/fd757549-33bd-434d-aac6-665c255b7160)
 ---
 > You've done a man's job, sir. I guess you're through, huh?
 
+
 <!--
+
+## RL WIP
+
+```sh
+python3 gym_run.py --mode learn
+# debug
+docker exec -it simulation-container-inst0 tmux attach
+docker exec -it aircraft-container-inst0_1 tmux attach
+# clean-up
+docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
+```
 
 ## License
 
@@ -580,8 +535,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
 
 - ArduPilot SITL for Iris uses option -f that also sets "external": True, this is not the case for the Alti Transition from ArduPilot/SITL_Models
 - QGC will only connect to the first 10 ArduPilot vehicles when GND_CONTAINER=false because of settings in QGroundControl.ini
-- On non-configured real-life AP, missing topics: ros2 topic echo /mavros/local_position/odom ros2 topic echo /mavros/home_position/home
-- Gazebo WindEffects plugin is disabled/not working for PX4 standard_vtol
+- Gazebo WindEffects plugin affects cruise speeds and it is disabled for the standard_vtol's model.sdf.erb
 - Command 178 MAV_CMD_DO_CHANGE_SPEED is accepted but not effective in changing speed for ArduPilot VTOL
 - In ArdupilotInterface's action callbacks, std::shared_lock<std::shared_mutex> lock(node_data_mutex_); could be used on the reads of lat_, lon_, alt_
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
@@ -589,17 +543,14 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
 
 ## Future Work
 
-### Feature: Betaflight SITL
-
-> Implement a C++ gz-transport/UDP bridge between Gazebo Sim and Betaflight SITL
+### Support for Gazebo Sim and Betaflight SITL
 
 - https://www.betaflight.com/docs/development/SITL
-- https://github.com/Aeroloop/betaloop
+- https://github.com/betaflight/betaloop
+- https://github.com/betaflight/aeroloop_gazebo
 - https://github.com/utiasDSL/gym-pybullet-drones/blob/a8c238c21c7586ee1735bafb358a4d5637402f14/gym_pybullet_drones/envs/BetaAviary.py#L111C1-L172C56
 
-### More Out-there Ideas
-
-> Potential for technical spikes/long-term, nice-to-have features
+### Potential for technical spikes/long-term, nice-to-have features
 
 - Integrate a GIS world generator (e.g., Cesium)
     - https://github.com/CesiumGS/cesium-native
@@ -613,5 +564,52 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
     - https://github.com/tiiuae/px4-gzsim-plugins/
     - https://docs.px4.io/main/en/simulation/hitl
     - https://ardupilot.org/dev/docs/hitl-simulators.html
+
+
+## Cheatsheets
+
+> <details>
+> <summary>Use <b>Tmux shortcuts</b> to navigate windows and panes in Xterm <i>(click to expand)</i></summary>
+>
+> ```sh
+> Ctrl + b, then n, p                   # Move between Tmux windows
+> Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
+> Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
+> Space                                 # Start selecting when in copy mode (move with arrow keys)
+> y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
+> q                                     # Exit copy mode
+> Ctrl + b, then "                      # Split a Tmux window horizontally
+> Ctrl + b, then %                      # Split a Tmux window vertically
+> Ctrl + b, then d                      # Detach Tmux
+> ```
+> ```sh
+> tmux list-sessions                    # List all sessions
+> tmux attach-session -t [session_name] # Reattach a session
+> tmux kill-session -t [session_name]   # Kill a session
+> tmux kill-server                      # Kill all sessions
+> ```
+> </details>
+> <details>
+> <summary>Periodically run <b>Docker cleanups</b> <i>(click to expand)</i></summary>
+>
+> ```sh
+> docker ps -a                          # List containers
+> docker stop $(docker ps -q)           # Stop all containers
+> docker container prune -f             # Remove all stopped containers
+> ```
+> ```sh
+> docker network ls                     # List docker networks
+> docker network rm <network_name>      # Remove a specific network
+> docker network prune -f               # Remove all unused networks
+> docker system df                      # Check disk usage by images and cache
+> docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
+> ```
+> ```sh
+> docker images                         # List images
+> docker image prune                    # Remove untagged images
+> docker rmi <image_name_or_id>         # Remove a specific image
+> docker builder prune                  # Clear all dangling cache
+> ```
+> </details>
 
 -->
