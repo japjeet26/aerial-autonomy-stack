@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# Also check: https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/supplementary/TODOs.md#maintenance-dependency-management
-
-HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/supplementary/REQUIREMENTS_UBUNTU.md"
+HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md"
 if grep -q "Microsoft" /proc/version || grep -q "WSL" /proc/version; then
     echo "[INFO] WSL environment detected: some checks (NVIDIA Driver/CTK) may behave differently; open a GitHub issue, if necessary"
-    HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/supplementary/REQUIREMENTS_WSL.md"
+    HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/tools_and_docs/docs/REQUIREMENTS_WSL.md"
 fi
 
 if [ -f /etc/os-release ]; then

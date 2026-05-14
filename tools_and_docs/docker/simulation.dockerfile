@@ -112,7 +112,7 @@ FROM ros2-qgc-zenoh-gz-image AS ros2-qgc-zenoh-gz-px4-image
 
 # PX4 SITL (NOTE: install PX4 tools first to avoid conflicts with ArduPilot, build later to customize)
 # Based on https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu.html
-COPY /github_clones/PX4-Autopilot /aas/github_apps/PX4-Autopilot
+COPY /_github_clones/PX4-Autopilot /aas/github_apps/PX4-Autopilot
 WORKDIR /aas/github_apps/PX4-Autopilot
 RUN bash ./Tools/setup/ubuntu.sh --no-sim-tools
 
@@ -123,7 +123,7 @@ FROM ros2-qgc-zenoh-gz-px4-image AS ros2-qgc-zenoh-gz-px4-ardupilot-image
 
 # ArduPilot SITL (temporarily as arduuser, then re chown to root)
 # Based on https://ardupilot.org/dev/docs/building-setup-linux.html#building-setup-linux
-COPY /github_clones/ardupilot /aas/github_apps/ardupilot
+COPY /_github_clones/ardupilot /aas/github_apps/ardupilot
 WORKDIR /aas/github_apps/ardupilot
 RUN useradd -m -s /bin/bash arduuser && \
     echo "arduuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/arduuser && chmod 0440 /etc/sudoers.d/arduuser && \
@@ -136,7 +136,7 @@ RUN chown -R root:root /aas/github_apps/ardupilot
 
 # ArduPilot Gazebo Plugin
 # Based on https://ardupilot.org/dev/docs/sitl-with-gazebo.html
-COPY /github_clones/ardupilot_gazebo /aas/github_apps/ardupilot_gazebo
+COPY /_github_clones/ardupilot_gazebo /aas/github_apps/ardupilot_gazebo
 WORKDIR /aas/github_apps/ardupilot_gazebo
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -213,7 +213,7 @@ RUN apt-get update && \
     apt-get install -y sqlite3 libfftw3-bin libfftw3-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-COPY /github_clones/flight_review /aas/github_apps/flight_review
+COPY /_github_clones/flight_review /aas/github_apps/flight_review
 WORKDIR /aas/github_apps/flight_review/app
 RUN python3 -m venv /px4fr-env
 RUN /px4fr-env/bin/pip3 install --no-cache-dir --upgrade pip && \
@@ -225,7 +225,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libcgal-dev libfftw3-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-COPY /github_clones/asv_wave_sim /aas/github_ws/src/asv_wave_sim
+COPY /_github_clones/asv_wave_sim /aas/github_ws/src/asv_wave_sim
 # Patch materials paths in waves/model.sdf
 RUN sed -i 's|>materials/|>models://waves/materials/|g' /aas/github_ws/src/asv_wave_sim/gz-waves-models/world_models/waves/model.sdf
 WORKDIR /aas/github_ws

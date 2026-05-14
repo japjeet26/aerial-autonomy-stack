@@ -52,7 +52,7 @@ RUN rosdep init
 FROM ros2-image AS ros2-px4msgs-image
 
 # Build PX4 messages
-COPY /github_clones/px4_msgs /aas/github_ws/src/px4_msgs
+COPY /_github_clones/px4_msgs /aas/github_ws/src/px4_msgs
 WORKDIR /aas/github_ws
 RUN rosdep update
 RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y
@@ -66,7 +66,7 @@ FROM ros2-px4msgs-image AS ros2-px4msgs-dds-image
 
 # XRCE-DDS
 # Based on https://micro-xrce-dds.docs.eprosima.com/en/latest/installation.html#installing-the-agent-standalone
-COPY /github_clones/Micro-XRCE-DDS-Agent /aas/github_apps/Micro-XRCE-DDS-Agent
+COPY /_github_clones/Micro-XRCE-DDS-Agent /aas/github_apps/Micro-XRCE-DDS-Agent
 WORKDIR /aas/github_apps/Micro-XRCE-DDS-Agent
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -134,7 +134,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deep
 # CMAKE_CUDA_ARCHITECTURES=87 based on: https://developer.nvidia.com/cuda-gpus
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
 # WARNING: this step takes up to 45'
-COPY /github_clones/onnxruntime /aas/github_apps/onnxruntime
+COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
         build-essential software-properties-common libopenblas-dev \
@@ -182,14 +182,14 @@ RUN curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions
 RUN apt update && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
 
 # Also install the Livox ROS2 driver only on Orin for deployment
-COPY /github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
+COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
     make -j$(nproc) && \
     make install && \
     ldconfig
-COPY /github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
+COPY /_github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
 WORKDIR /aas/github_ws/
 # Based on https://github.com/Livox-SDK/livox_ros_driver2/blob/master/README.md
 # https://github.com/Livox-SDK/livox_ros_driver2/blob/master/build.sh
@@ -205,7 +205,7 @@ FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ro
 
 # Install KISS-ICP
 RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
-COPY /github_clones/kiss-icp /aas/github_ws/src/kiss-icp
+COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"

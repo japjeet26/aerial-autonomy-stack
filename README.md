@@ -4,9 +4,9 @@
 
 1. **Develop** multi-drone autonomy—with ROS2, PX4, and ArduPilot
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
-3. **Deploy** in real drones—with JetPack and NVIDIA Orin
+3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
-For an example bill of materials, read [`BOM.md`](/supplementary/BOM.md); for motivation, read [`RATIONALE.md`](/supplementary/RATIONALE.md); if you wish, cite this work as:
+For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); for motivation, read [`RATIONALE.md`](/tools_and_docs/docs/RATIONALE.md); if you wish, cite this work as:
 
 ```bibtex
 @INPROCEEDINGS{panerati2026aas,
@@ -147,37 +147,37 @@ aerial-autonomy-stack
 │   │
 │   └── ground.yml.erb                                # Ground docker tmux entrypoint
 │
-├── scripts
-│   ├── docker
-│   │   ├── Dockerfile.aircraft                       # Docker image for aircraft simulation and deployment
-│   │   ├── Dockerfile.ground                         # Docker image for ground system simulation and deployment
-│   │   └── Dockerfile.simulation                     # Docker image for SITL and HITL simulation
-│   │
-│   ├── deploy_build.sh                               # Build `Dockerfile.aircraft` for arm64/Orin
-│   ├── deploy_run.sh                                 # Start the aircraft docker on arm64/Orin or the ground docker on amd64 (deploy or HITL)
-│   │
-│   ├── gym_run.py                                    # Examples for the Gymnasium aas-gym package
-│   │
-│   ├── sim_build.sh                                  # Build all dockerfiles for amd64/simulation
-│   └── sim_run.sh                                    # Start the simulation (SITL or HITL)
+├── simulation
+│   ├── simulation_resources
+│   │   ├── aircraft_models
+│   │   │   ├── alti_transition_quad                  # ArduPilot VTOL model
+│   │   │   ├── iris_with_ardupilot                   # ArduPilot quad model
+│   │   │   ├── sensor_camera                         # Camera model
+│   │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
+│   │   │   ├── sensor_lidar                          # LiDAR model
+│   │   │   ├── standard_vtol                         # PX4 VTOL model
+│   │   │   └── x500                                  # PX4 quad model
+│   │   └── simulation_worlds
+│   │       ├── apple_orchard.sdf
+│   │       ├── impalpable_greyness.sdf
+│   │       ├── shibuya_crossing.sdf
+│   │       └── swiss_town.sdf
+│   │
+│   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
-└── simulation
-    ├── simulation_resources
-    │   ├── aircraft_models
-    │   │   ├── alti_transition_quad                  # ArduPilot VTOL model
-    │   │   ├── iris_with_ardupilot                   # ArduPilot quad model
-    │   │   ├── sensor_camera                         # Camera model
-    │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
-    │   │   ├── sensor_lidar                          # LiDAR model
-    │   │   ├── standard_vtol                         # PX4 VTOL model
-    │   │   └── x500                                  # PX4 quad model
-    │   └── simulation_worlds
-    │       ├── apple_orchard.sdf
-    │       ├── impalpable_greyness.sdf
-    │       ├── shibuya_crossing.sdf
-    │       └── swiss_town.sdf
-    │
-    └── simulation.yml.erb                            # Simulation docker tmux entrypoint
+└── tools_and_docs
+    ├── docker
+    │   ├── aircraft.dockerfile                       # Docker image for aircraft simulation and deployment
+    │   ├── ground.dockerfile                         # Docker image for ground system simulation and deployment
+    │   └── simulation.dockerfile                     # Docker image for SITL and HITL simulation
+    │
+    ├── deploy_build.sh                               # Build `aircraft.dockerfile` for arm64/Orin
+    ├── deploy_run.sh                                 # Start the aircraft docker on arm64/Orin or the ground docker on amd64 (deploy or HITL)
+    │
+    ├── gym_run.py                                    # Examples for the Gymnasium aas-gym package
+    │
+    ├── sim_build.sh                                  # Build all dockerfiles for amd64/simulation
+    └── sim_run.sh                                    # Start the simulation (SITL or HITL)
 ```
 </details>
 
@@ -229,9 +229,9 @@ External repositories:
 sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
 
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/scripts/
+cd aerial-autonomy-stack/tools_and_docs/
 
-./check_requirements.sh                               # If needed, refer to REQUIREMENTS_UBUNTU.md and REQUIREMENTS_WSL.md to install the requirements
+./tests/check_requirements.sh                         # If needed, refer to REQUIREMENTS_UBUNTU.md and REQUIREMENTS_WSL.md to install the requirements
 
 # Option A: local build
 ./sim_build.sh                                        # The 1st build takes ~30GB and ~30' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
@@ -252,7 +252,7 @@ done
 > [!NOTE]
 > AAS is tested on Ubuntu 24.04/22.04 with `nvidia-driver-580` using an i7-11 with 16GB RAM and RTX 3060
 >
-> Read [`REQUIREMENTS_UBUNTU.md`](/supplementary/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/supplementary/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
+> Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
 
 ## 2. Simulation
 
@@ -260,16 +260,16 @@ done
 
 ```sh
 # Start AAS
-cd aerial-autonomy-stack/scripts
+cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30-40s of simulated time before being ready to arm)
 
 # Simulation options:
-# AUTOPILOT=px4, ardupilot
-# HEADLESS/CAMERA/LIDAR=true, false
-# NUM_QUADS/NUM_VTOLS=0, 1, ...
-# WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
-# RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
-# INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
+#     AUTOPILOT=px4, ardupilot
+#     HEADLESS/CAMERA/LIDAR=true, false
+#     NUM_QUADS/NUM_VTOLS=0, 1, ...
+#     WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
+#     RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
+#     INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 ```
 
 In a new terminal:
@@ -285,14 +285,6 @@ done
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh` to customize the sensor parameters
 >
-> <details>
-> <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>
-> 
-> ```sh
-> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
-> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
-> ```
-> </details>
 > <details>
 > <summary>Use <b>ROS2 drone and gimbal control primitives</b> from CLI <i>(click to expand)</i></summary>
 >
@@ -327,12 +319,20 @@ done
 > To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_resources/missions/test_mission.yaml)
 > </details>
 > <details>
+> <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>
+> 
+> ```sh
+> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
+> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> ```
+> </details>
+> <details>
 > <summary><b>Develop within running containers</b> <i>(click to expand)</i></summary>
 > 
 > Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders `[aircraft|ground|simulation]_resources`, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
 > 
 > ```sh
-> cd aerial-autonomy-stack/scripts/
+> cd aerial-autonomy-stack/tools_and_docs/
 > DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_resources/ and *_ws/src/ folders are mounted from the host
 > ```
 > 
@@ -377,7 +377,7 @@ done
 sudo apt update && sudo apt install -y git
 
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/scripts/
+cd aerial-autonomy-stack/tools_and_docs/
 
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
 ```
@@ -391,26 +391,26 @@ cd aerial-autonomy-stack/scripts/
 >[!NOTE]
 > AAS is tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB on an X650
 >
-> Read [`SETUP_AVIONICS.md`](/supplementary/SETUP_AVIONICS.md) and [`BOM.md`](/supplementary/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
+> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
 
 Start the `aircraft-image` on Jetson Orin NX:
 
 ```sh
-cd aerial-autonomy-stack/scripts/
+cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh
 # The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
 
 # Deployment options:
-# DRONE_TYPE=quad, vtol
-# AUTOPILOT=px4, ardupilot
-# DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-# HEADLESS/CAMERA/LIDAR=true, false
+#     DRONE_TYPE=quad, vtol
+#     AUTOPILOT=px4, ardupilot
+#     DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
+#     HEADLESS/CAMERA/LIDAR=true, false
 ```
 
 Start the `ground-image` on a laptop to connect QGC, Zenoh, SSH, and GStreamer:
 
 ```sh
-cd aerial-autonomy-stack/scripts/
+cd aerial-autonomy-stack/tools_and_docs/
 ./sim_build.sh                                        # Build all images for amd64, including ground-image
 GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
@@ -472,18 +472,6 @@ conda config --set auto_activate_base false           # Turn off auto initializa
 conda update --all -n base -c defaults                # Update to the latest conda version
 conda create -n aas python=3.12                       # Latest Python version beyond "bugfix" status https://devguide.python.org/versions/
 ```
-
-**Optionally**, force CPU/GPU performance modes
-```sh
-sudo cpupower frequency-set -g performance            # Force CPU performance mode
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor # Check (does NOT persist across reboots)
-
-sudo prime-select nvidia                              # Force GPU use instead of on-demand
-prime-select query                                    # Check (persists across reboots)
-
-sudo nvidia-smi -pm 1                                 # Prevent NVIDIA driver from going idle
-nvidia-smi --query-gpu=persistence_mode --format=csv,noheader # Check (does NOT persist across reboots)
-```
 </details>
 
 Install the `aas-gym` package (**after** completing the steps in ["Installation"](#1-installation)):
@@ -502,7 +490,7 @@ pip3 install -e .
 Use with:
 ```sh
 conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/scripts
+cd aerial-autonomy-stack/tools_and_docs
 python3 gym_run.py --mode step                        # Manually step AAS @1Hz
 python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
 python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz
@@ -565,50 +553,54 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
     - https://ardupilot.org/dev/docs/hitl-simulators.html
 
 
-## Cheatsheets
+## Cheatsheets and tips
 
-> <details>
-> <summary>Use <b>Tmux shortcuts</b> to navigate windows and panes in Xterm <i>(click to expand)</i></summary>
->
-> ```sh
-> Ctrl + b, then n, p                   # Move between Tmux windows
-> Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
-> Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
-> Space                                 # Start selecting when in copy mode (move with arrow keys)
-> y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
-> q                                     # Exit copy mode
-> Ctrl + b, then "                      # Split a Tmux window horizontally
-> Ctrl + b, then %                      # Split a Tmux window vertically
-> Ctrl + b, then d                      # Detach Tmux
-> ```
-> ```sh
-> tmux list-sessions                    # List all sessions
-> tmux attach-session -t [session_name] # Reattach a session
-> tmux kill-session -t [session_name]   # Kill a session
-> tmux kill-server                      # Kill all sessions
-> ```
-> </details>
-> <details>
-> <summary>Periodically run <b>Docker cleanups</b> <i>(click to expand)</i></summary>
->
-> ```sh
-> docker ps -a                          # List containers
-> docker stop $(docker ps -q)           # Stop all containers
-> docker container prune -f             # Remove all stopped containers
-> ```
-> ```sh
-> docker network ls                     # List docker networks
-> docker network rm <network_name>      # Remove a specific network
-> docker network prune -f               # Remove all unused networks
-> docker system df                      # Check disk usage by images and cache
-> docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
-> ```
-> ```sh
-> docker images                         # List images
-> docker image prune                    # Remove untagged images
-> docker rmi <image_name_or_id>         # Remove a specific image
-> docker builder prune                  # Clear all dangling cache
-> ```
-> </details>
+**Optionally**, force CPU/GPU performance modes
+```sh
+sudo cpupower frequency-set -g performance            # Force CPU performance mode
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor # Check (does NOT persist across reboots)
+
+sudo prime-select nvidia                              # Force GPU use instead of on-demand
+prime-select query                                    # Check (persists across reboots)
+
+sudo nvidia-smi -pm 1                                 # Prevent NVIDIA driver from going idle
+nvidia-smi --query-gpu=persistence_mode --format=csv,noheader # Check (does NOT persist across reboots)
+```
+
+Use Tmux shortcuts to navigate windows and panes in Xterm
+```sh
+Ctrl + b, then n, p                   # Move between Tmux windows
+Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
+Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
+Space                                 # Start selecting when in copy mode (move with arrow keys)
+y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
+q                                     # Exit copy mode
+Ctrl + b, then "                      # Split a Tmux window horizontally
+Ctrl + b, then %                      # Split a Tmux window vertically
+Ctrl + b, then d                      # Detach Tmux
+
+tmux list-sessions                    # List all sessions
+tmux attach-session -t [session_name] # Reattach a session
+tmux kill-session -t [session_name]   # Kill a session
+tmux kill-server                      # Kill all sessions
+```
+
+Periodically run Docker cleanups
+```sh
+docker ps -a                          # List containers
+docker stop $(docker ps -q)           # Stop all containers
+docker container prune -f             # Remove all stopped containers
+
+docker network ls                     # List docker networks
+docker network rm <network_name>      # Remove a specific network
+docker network prune -f               # Remove all unused networks
+docker system df                      # Check disk usage by images and cache
+docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
+
+docker images                         # List images
+docker image prune                    # Remove untagged images
+docker rmi <image_name_or_id>         # Remove a specific image
+docker builder prune                  # Clear all dangling cache
+```
 
 -->

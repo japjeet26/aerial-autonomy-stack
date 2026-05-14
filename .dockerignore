@@ -5,10 +5,10 @@
 **/*.pyc
 
 # Ignore temporary assets
-github_clones/*.zip
-github_clones/*_temp/
+_github_clones/*.zip
+_github_clones/*_temp/
 
 # Builds requiring git metadata
-!github_clones/ardupilot/**/.git
-!github_clones/PX4-Autopilot/**/.git
-!github_clones/onnxruntime/**/.git
+!_github_clones/ardupilot/**/.git
+!_github_clones/PX4-Autopilot/**/.git
+!_github_clones/onnxruntime/**/.git

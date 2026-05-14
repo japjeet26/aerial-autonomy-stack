@@ -1,14 +1,19 @@
 #!/bin/bash
 
 # Adjust the configuratoin below as needed, then run with:
+# $ cd aerial-autonomy-stack/tools_and_docs/
 # $ conda activate aas
-# $ ./performance.sh
+# $ ./tests/performance.sh
 
 if [[ "$CONDA_DEFAULT_ENV" != "aas" ]]; then
     echo "Error: The 'aas' conda environment is not active."
     echo "Please activate it with: conda activate aas"
     exit 1
 fi
+
+# Find the script's path (and then gym_run.py script in tools_and_docs/)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+GYM_RUN_SCRIPT="$SCRIPT_DIR/../gym_run.py"
 
 # Configuration
 MODES=("speedup" "vectorenv-speedup")
@@ -62,7 +67,7 @@ suite_start_time=$(date +%s)
                         
                         while [ $attempt -le $MAX_RETRIES ]; do
 
-                            output=$(python3 ../scripts/gym_run.py \
+                            output=$(python3 "$GYM_RUN_SCRIPT" \
                                 --mode "$mode" \
                                 --autopilot "$autopilot" \
                                 --num_quads "$quads" \

@@ -4,7 +4,7 @@
 >
 > Alternative hardware options include: [ARK's Jetson PAB Orin NX NDAA](https://arkelectron.com/product/ark-jetson-orin-nx-ndaa-bundle/) and [Holybro's 6X Pro](https://holybro.com/collections/flight-controllers/products/pixhawk-6x-pro) paired with [Seeed Studio's A603/A608](https://www.seeedstudio.com/Jetson-A608-Carrier-Board-for-Orin-NX-Orin-Nano-Series-p-5853.html)
 >
-> For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/supplementary/BOM.md)
+> For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/tools_and_docs/docs/BOM.md)
 
 ## Flash JetPack 6 to Jetson Orin
 

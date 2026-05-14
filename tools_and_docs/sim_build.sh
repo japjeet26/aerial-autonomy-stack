@@ -8,7 +8,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 BUILD_ARGS=""
 if [ "${CLEAN_BUILD:-false}" = "true" ]; then
-  rm -rf "${SCRIPT_DIR}/../github_clones"
+  rm -rf "${SCRIPT_DIR}/../_github_clones"
   BUILD_ARGS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi aircraft-image:latest ground-image:latest simulation-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
@@ -20,7 +20,7 @@ if [ "${CLONE_ONLY:-false}" = "true" ]; then
 fi
 
 # Create a folder (ignored by git) to clone GitHub repos
-CLONE_DIR="${SCRIPT_DIR}/../github_clones"
+CLONE_DIR="${SCRIPT_DIR}/../_github_clones"
 mkdir -p "$CLONE_DIR"
 
 REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
@@ -48,7 +48,7 @@ for repo_info in "${REPOS[@]}"; do
     TAGS=$(git tag --points-at HEAD)
     echo "There is a clone of ${dir} on branch: ${BRANCH}, tags: [${TAGS}]"
     # The script does not automatically pull changes for already cloned repos (as they should be on fixed tags)
-    # This avoids breaking the Docker cache but it requires manually deleting the github_clones folder for branch/tag updates
+    # This avoids breaking the Docker cache but it requires manually deleting the _github_clones folder for branch/tag updates
     # git pull
     # git submodule update --init --recursive --depth 1
     cd "$CLONE_DIR"
@@ -91,18 +91,18 @@ if [ "$DOWNLOAD_NEEDED" = "true" ]; then
     exit 1 # Stop the script
   fi
 fi
-# Unzip quietly (-q), overwrite (-o), into the repository root directory (-d) above scripts/ to merge into simulation/
+# Unzip quietly (-q), overwrite (-o), into the repository root directory (-d) above tools_and_docs/ to merge into simulation/
 unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
 if [ "$BUILD_DOCKER" = "true" ]; then
   # The first build takes ~15' and creates a 21GB image (8GB for ros-humble-desktop with nvidia runtime, 10GB for PX4 and ArduPilot SITL)
-  docker build $BUILD_ARGS -t simulation-image -f "${SCRIPT_DIR}/docker/Dockerfile.simulation" "${SCRIPT_DIR}/.."
+  docker build $BUILD_ARGS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
 
   # The first build takes <5' and creates an 9GB image (8GB for ros-humble-desktop with nvidia runtime)
-  docker build $BUILD_ARGS -t ground-image -f "${SCRIPT_DIR}/docker/Dockerfile.ground" "${SCRIPT_DIR}/.."
+  docker build $BUILD_ARGS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
 
   # The first build takes ~10' and creates an 18GB image (8GB for ros-humble-desktop with nvidia runtime, 7GB for YOLO, ONNX)
-  docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/Dockerfile.aircraft" "${SCRIPT_DIR}/.."
+  docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 else
   echo -e "Skipping Docker builds"
 fi

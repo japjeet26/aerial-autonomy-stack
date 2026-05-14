@@ -155,7 +155,7 @@ class YoloInferenceNode(Node):
         print(f"DFOV {self.dfov}deg, HFOV {hfov:.2f}deg, VFOV {vfov:.2f}deg")
 
         # Load YOLO model and runtime
-        # Options, from fastest to most accurate, <10MB to >100MB: yolo26n, yolo26s, yolo26m, yolo26l, yolo26x, export in Dockerfile.aircraft
+        # Options, from fastest to most accurate, <10MB to >100MB: yolo26n, yolo26s, yolo26m, yolo26l, yolo26x, export in aircraft.dockerfile
         if self.architecture == 'x86_64':
             max_dim = max(stream_width, stream_height)
             if max_dim <= 320:

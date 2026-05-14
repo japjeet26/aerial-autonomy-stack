@@ -106,7 +106,7 @@ RUN apt update \
         git meson ninja-build pkg-config gcc g++ systemd \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-COPY /github_clones/mavlink-router /aas/github_apps/mavlink-router
+COPY /_github_clones/mavlink-router /aas/github_apps/mavlink-router
 WORKDIR /aas/github_apps/mavlink-router
 RUN meson setup build . --buildtype=release \
     && ninja -C build \
@@ -114,7 +114,7 @@ RUN meson setup build . --buildtype=release \
 # Check with $ mavlink-routerd --version
 
 # Add MAVLink 2 C library
-COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
+COPY /_github_clones/c_library_v2 /usr/local/include/mavlink/
 
 ################################################################################
 # Stage 4 - 9+GB ###############################################################
