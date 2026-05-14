@@ -156,12 +156,14 @@ aerial-autonomy-stack
 │   │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
 │   │   │   ├── sensor_lidar                          # LiDAR model
 │   │   │   ├── standard_vtol                         # PX4 VTOL model
-│   │   │   └── x500                                  # PX4 quad model
+│   │   │   ├── x500                                  # PX4 quad model
+│   │   │   └── sensor_config.yaml                    # Intrinsics and extrinsics for all sensor and vehicle models
 │   │   └── simulation_worlds
 │   │       ├── apple_orchard.sdf
 │   │       ├── impalpable_greyness.sdf
 │   │       ├── shibuya_crossing.sdf
-│   │       └── swiss_town.sdf
+│   │       ├── swiss_town.sdf
+│   │       └── waterworld.sdf
 │   │
 │   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
