@@ -87,6 +87,14 @@ docker info | grep -i runtime       # Check the `nvidia` runtime is available
 docker run --rm --gpus all nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
 ```
 
+> [!TIP]
+> Re-run the `check_requirements.sh` script
+> ```
+> cd aerial-autonomy-stack/tools_and_docs/
+>  ./tests/check_requirements.sh
+> ```
+> and go back to the ["Installation" instructions](https://github.com/JacopoPan/aerial-autonomy-stack#1-installation)
+
 ## Optimize Memory Usage
 
 **Optionally**, increase the swap size and, if you have an SSD, decrease swappiness

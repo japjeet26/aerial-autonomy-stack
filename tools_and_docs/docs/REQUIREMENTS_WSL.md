@@ -2,16 +2,17 @@
 
 > These instructions are tested using Windows 11 Enterprise 23H2 (OS build 22631.6199) on an i7-11 with 32GB RAM and RTX A2000
 
-## Setup WSL for Ubuntu 22
+## Setup WSL for Ubuntu 24
 
 > The latest Windows Subsystem for Linux (WSL2) and WSLg (WSL2 extension with GUI capabilities) are included in Windows 11
 
 - If WSL is not enabled, use "Turn Windows features on or off" to checkbox [Hyper-V, Windows Hypervisor Platform, and Windows Subsystem for Linux](https://github.com/microsoft/WSL/issues/9521#issuecomment-2385289848)
 - From PowerShell, update and default to WSL2 `wsl --update`, `wsl --set-default-version 2`
-- Check the available Linux distributions `wsl --list --online`
-- Install "Ubuntu-22.04" `wsl --install -d Ubuntu-22.04`
+- Check all the available Linux distributions `wsl --list --online`
+- Install "Ubuntu-24.04" `wsl --install -d Ubuntu-24.04`
 - Setup an account when prompted `Enter new UNIX username:` and `New password:`
-- Check you have Ubuntu-22.04 on VERSION 2 with `wsl --list --verbose`
+- Set "Ubuntu-24.04" as default `wsl --set-default Ubuntu-24.04`
+- Check you have "Ubuntu-24.04" as default (`*`) and on VERSION 2 with `wsl --list --verbose`
 
 ```sh
 wsl ~                                                 # Access WSL from Windows PowerShell
@@ -69,7 +70,6 @@ nvidia-smi                          # From WSL, check NVIDIA driver (these instr
 
 sudo apt update && sudo apt install -y mesa-utils
 glxinfo -B                          # (optional) Check OpenGL renderer, to force GPU rendering, use $ echo 'export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA' >> ~/.bashrc && source ~/.bashrc
-
 ```
 
 ## Install Docker Engine inside WSL
@@ -137,6 +137,14 @@ docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
 docker run --rm --gpus all nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
 ```
+
+> [!TIP]
+> Re-run the `check_requirements.sh` script
+> ```
+> cd aerial-autonomy-stack/tools_and_docs/
+>  ./tests/check_requirements.sh
+> ```
+> and go back to the ["Installation" instructions](https://github.com/JacopoPan/aerial-autonomy-stack#1-installation)
 
 ## Troubleshoot
 
