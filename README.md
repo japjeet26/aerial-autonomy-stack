@@ -28,7 +28,6 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight) 
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (`rosbag`)
-
 </details>
 
 ## 1. Installation
@@ -451,7 +450,6 @@ aerial-autonomy-stack
 ```
 </details>
 
-
 <details>
 <summary><b>Dependencies</b> management <i>(click to expand)</i></summary>
 
@@ -507,7 +505,6 @@ External repositories:
 ---
 > You've done a man's job, sir. I guess you're through, huh?
 
-
 <!--
 
 ## RL WIP
@@ -558,7 +555,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
     - https://github.com/tiiuae/px4-gzsim-plugins/
     - https://docs.px4.io/main/en/simulation/hitl
     - https://ardupilot.org/dev/docs/hitl-simulators.html
-
 
 ## Cheatsheets and tips
 
