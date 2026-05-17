@@ -6,18 +6,12 @@
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
 3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
-For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); for motivation, read [`RATIONALE.md`](/tools_and_docs/docs/RATIONALE.md); if you wish, cite this work as:
+For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); for motivation, read [`RATIONALE.md`](/tools_and_docs/docs/RATIONALE.md)
 
-```bibtex
-@INPROCEEDINGS{panerati2026aas,
-    author={Jacopo Panerati and Sina Sajjadi and Sina Soleymanpour and Varunkumar Mehta and Iraj Mantegh},
-    booktitle={2026 International Conference on Unmanned Aircraft Systems (ICUAS)},
-    title={{aerial-autonomy-stack}---a faster-than-real-time, autopilot-agnostic, {ROS2} framework to simulate and deploy perception-based drones},
-    year={2026}}
-```
+https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 
 <details>
-<summary><b>Feature list</b> <i>(click to expand)</i></summary>
+<summary><b>Features</b> <i>(click to expand)</i></summary>
 
 - **PX4 and ArduPilot multi-vehicle** simulation (**quadrotors and VTOLs**)
 - ROS2 action-based autopilot interface (*via* XRCE-DDS or MAVROS)
@@ -37,9 +31,283 @@ For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); 
 
 </details>
 
-https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
+## 1. Installation
 
-## 0. Architecture
+> AAS is developed on Ubuntu 24.04 with `nvidia-driver-580` using an i7-11 with 16GB RAM and RTX 3060
+>
+> Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
+
+```sh
+sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
+git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-autonomy-stack/tools_and_docs/
+./tests/check_requirements.sh                         # AAS requires nvidia-driver-580, docker, and nvidia-container-toolkit
+./sim_build.sh                                        # The 1st build takes ~40' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
+```
+
+<div align="right">
+  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml">
+    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml/badge.svg" alt="aas build-and-test amd64">
+  </a>
+</div>
+
+## 2. Simulation
+
+![workspace](https://github.com/user-attachments/assets/ad909fcc-69de-44ac-84b3-c5bc7a1c896f)
+
+On one terminal, start AAS:
+
+```sh
+cd aerial-autonomy-stack/tools_and_docs/
+AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30-40s of simulated time before being ready to arm)
+```
+
+On another terminal, fly all drones:
+
+```sh
+for ID in {1..2}; do
+  docker exec -d aircraft-container-inst0_$ID bash -c "source /opt/ros/humble/setup.bash &&
+    source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash &&
+    ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true"
+done
+```
+
+`./sim_run.sh` options:
+
+```
+- AUTOPILOT=px4, ardupilot
+- HEADLESS/CAMERA/LIDAR=true, false
+- NUM_QUADS/NUM_VTOLS=0, 1, ...
+- WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
+- RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
+- INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
+```
+
+![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
+
+> `WORLD`s:
+> *(i)* `apple_orchard`, a GIS world created using [BlenderGIS](https://github.com/domlysz/BlenderGIS)
+> / *(ii)* `impalpable_greyness`, an empty world with simple shapes
+> / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
+> / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
+> / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
+
+![waves](https://github.com/user-attachments/assets/fd757549-33bd-434d-aac6-665c255b7160)
+
+> [!TIP]
+> Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
+>
+> <details>
+> <summary>Use ROS2 drone and gimbal <b>control primitives</b> from CLI <i>(click to expand)</i></summary>
+>
+> ```sh
+> # Takeoff action (quads and VTOLs)
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0, vtol_transition_heading: 330.0, vtol_loiter_nord: 200.0, vtol_loiter_east: 100.0, vtol_loiter_alt: 120.0}'"
+>
+> # Land (at home) action (quads and VTOLs)
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
+>
+> # Orbit action (quads and VTOLs)
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
+>
+> # Reposition service (quads only)
+> ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
+>
+> # Offboard action (PX4 quads and VTOLs offboard_setpoint_type: attitude = 0, rates = 1, trajectory = 2; ArduPilot quads offboard_setpoint_type: velocity = 3, acceleration = 4) 
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{offboard_setpoint_type: 1, max_duration_sec: 5.0}'"
+>
+> # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
+> ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
+>
+> # Gimbal status and position control (in radians)
+> ros2 topic echo /gimbal_state
+> ros2 topic pub -1 /gimbal_pitch_cmd std_msgs/msg/Float64 "{data: 1.57}"
+> ```
+> To analyze the flight logs in the `Simulation`'s Xterm terminal:
+> ```sh
+> /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
+> ```
+>
+> To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_resources/missions/test_mission.yaml)
+> </details>
+> <details>
+> <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>
+> 
+> ```sh
+> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
+> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> ```
+> </details>
+> <details>
+> <summary>Develop within <b>live containers</b> <i>(click to expand)</i></summary>
+> 
+> Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders `[aircraft|ground|simulation]_resources`, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
+> 
+> ```sh
+> cd aerial-autonomy-stack/tools_and_docs/
+> DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_resources/ and *_ws/src/ folders are mounted from the host
+> ```
+> 
+> To build changes—**made on the host**—in the `Ground` or `QUAD` Xterm terminal:
+> 
+> ```sh
+> cd /aas/aircraft_ws/                                                                        # Or cd /aas/ground_ws/
+> colcon build --symlink-install
+> ```
+> 
+> To start the simulation, in the `QUAD` Xterm terminal:
+> 
+> ```sh
+> tmuxinator start -p /aas/aircraft.yml.erb
+> ```
+> 
+> In the `Ground` Xterm terminal:
+> ```sh
+> tmuxinator start -p /aas/ground.yml.erb
+> ```
+> 
+> In the `Simulation` Xterm terminal:
+> ```sh
+> tmuxinator start -p /aas/simulation.yml.erb
+> ```
+> 
+> To end the simulation, in each terminal detach Tmux with `Ctrl + b`, then `d`; kill all lingering processes with `tmux kill-server && pkill -f gz`
+> </details>
+
+## 3. Jetson Deployment
+
+> AAS is tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB on an X650
+>
+> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
+
+```sh
+sudo apt update && sudo apt install -y git
+git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-autonomy-stack/tools_and_docs/
+./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
+```
+
+<div align="right">
+  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml">
+    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64">
+  </a>
+</div>
+
+On a Jetson Orin, start the `aircraft-image`:
+
+```sh
+cd aerial-autonomy-stack/tools_and_docs/
+AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh
+# The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
+```
+
+`./deploy_run.sh` options:
+
+```
+- DRONE_TYPE=quad, vtol
+- AUTOPILOT=px4, ardupilot
+- DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
+- HEADLESS/CAMERA/LIDAR=true, false
+```
+
+On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
+
+```sh
+cd aerial-autonomy-stack/tools_and_docs/
+./sim_build.sh                                        # Build all images for amd64, including ground-image
+GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+```
+
+<details>
+<summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
+
+> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
+> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
+
+Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
+
+- One simulation computer, with IP `[SIM_SUBNET].90.100`
+- One ground computer, with IP `[SIM_SUBNET].90.101`
+- `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
+
+> **Optionally**, set up a second LAN :`AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
+> 
+> - One ground computer, with IP `[AIR_SUBNET].90.101`
+> - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
+
+First, start all aircraft containers, one on each Jetson (e.g. *via* SSH):
+```sh
+# On the Jetson with IPs ending in 90.1
+HITL=true DRONE_ID=1 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
+```
+
+```sh
+# On the Jetson with IPs ending in 90.2
+HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
+```
+
+Then, start the simulation:
+```sh
+# On the computer with IPs ending in 90.100
+HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 ./sim_run.sh
+```
+
+Finally, start QGC and the Zenoh bridge:
+```sh
+# On the computer with IPs ending in 90.101
+HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+```
+
+> **Note:** running only the first 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
+
+Once done, detach Tmux (and remove the containers) with `Ctrl + b`, then `d`
+</details>
+
+## 4. Gymnasium Environment
+
+<details>
+<summary>Using a Python <kbd>venv</kbd> or a <a href="https://docs.conda.io/projects/conda/en/stable/user-guide/install/linux.html"><kbd>conda</kbd></a> environment is optional but recommended <i>(click to expand)</i></summary>
+
+```sh
+wget https://repo.anaconda.com/archive/Anaconda3-2025.12-2-Linux-x86_64.sh # Or a newer version in https://repo.anaconda.com/archive/
+bash Anaconda3-2025.12-2-Linux-x86_64.sh              # Install; start a new terminal
+conda config --set auto_activate_base false           # Turn off auto initialization of (base); start a new terminal
+conda update --all -n base -c defaults                # Update to the latest conda version
+conda create -n aas python=3.12                       # Latest Python version beyond "bugfix" status https://devguide.python.org/versions/
+```
+</details>
+
+Install the `aas-gym` package (**after** completing the steps in ["Installation"](#1-installation)):
+```sh
+conda activate aas                                    # If using Anaconda
+cd aerial-autonomy-stack/aas-gym/
+pip3 install -e .
+```
+
+<div align="right">
+  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml">
+    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml/badge.svg" alt="aas-gym pip install">
+  </a>
+</div>
+
+Examples:
+```sh
+conda activate aas                                    # If using Anaconda
+cd aerial-autonomy-stack/tools_and_docs
+python3 gym_run.py --mode step                        # Manually step AAS @1Hz
+python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
+python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz
+```
+
+## Citation
+
+```bibtex
+@INPROCEEDINGS{panerati2026aas,
+    author={Jacopo Panerati and Sina Sajjadi and Sina Soleymanpour and Varunkumar Mehta and Iraj Mantegh},
+    booktitle={2026 International Conference on Unmanned Aircraft Systems (ICUAS)},
+    title={{aerial-autonomy-stack}---a faster-than-real-time, autopilot-agnostic, {ROS2} framework to simulate and deploy perception-based drones},
+    year={2026}}
+```
+
+## Appendix: Architecture
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'monospace'}}}%%
@@ -119,7 +387,7 @@ flowchart TB
 ```
 
 <details>
-<summary>Repository structure <i>(click to expand)</i></summary>
+<summary>Repository <b>structure</b> <i>(click to expand)</i></summary>
 
 ```sh
 aerial-autonomy-stack
@@ -185,7 +453,7 @@ aerial-autonomy-stack
 
 
 <details>
-<summary>Dependency management <i>(click to expand)</i></summary>
+<summary><b>Dependencies</b> management <i>(click to expand)</i></summary>
 
 - [x] Host OS: [Ubuntu 22.04/24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
 - [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
@@ -236,280 +504,6 @@ External repositories:
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>
 
-## 1. Installation
-
-```sh
-sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
-
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/tools_and_docs/
-
-./tests/check_requirements.sh                         # If needed, refer to REQUIREMENTS_UBUNTU.md and REQUIREMENTS_WSL.md to install the requirements
-
-# Option A: local build
-./sim_build.sh                                        # The 1st build takes ~30GB and ~30' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
-
-# Option B: pull pre-built images (updated every Friday night)
-for name in aircraft ground simulation; do
-  docker pull ghcr.io/jacopopan/${name}-image:latest
-  docker tag ghcr.io/jacopopan/${name}-image:latest ${name}-image:latest
-done
-```
-
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml/badge.svg" alt="aas build-and-test amd64">
-  </a>
-</div>
-
-> [!NOTE]
-> AAS is developed on Ubuntu 24.04 with `nvidia-driver-580` using an i7-11 with 16GB RAM and RTX 3060
->
-> Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
-
-## 2. Simulation
-
-![workspace](https://github.com/user-attachments/assets/ad909fcc-69de-44ac-84b3-c5bc7a1c896f)
-
-```sh
-# Start AAS
-cd aerial-autonomy-stack/tools_and_docs/
-AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30-40s of simulated time before being ready to arm)
-
-# Simulation options:
-#     AUTOPILOT=px4, ardupilot
-#     HEADLESS/CAMERA/LIDAR=true, false
-#     NUM_QUADS/NUM_VTOLS=0, 1, ...
-#     WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
-#     RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
-#     INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
-```
-
-In a new terminal:
-```sh
-# Fly all drones
-for ID in {1..2}; do
-  docker exec -d aircraft-container-inst0_$ID bash -c "source /opt/ros/humble/setup.bash &&
-    source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash &&
-    ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true"
-done
-```
-
-> [!TIP]
-> Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh` to customize the sensor parameters
->
-> <details>
-> <summary>Use <b>ROS2 drone and gimbal control primitives</b> from CLI <i>(click to expand)</i></summary>
->
-> ```sh
-> # Takeoff action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0, vtol_transition_heading: 330.0, vtol_loiter_nord: 200.0, vtol_loiter_east: 100.0, vtol_loiter_alt: 120.0}'"
->
-> # Land (at home) action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
->
-> # Orbit action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
->
-> # Reposition service (quads only)
-> ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
->
-> # Offboard action (PX4 quads and VTOLs offboard_setpoint_type: attitude = 0, rates = 1, trajectory = 2; ArduPilot quads offboard_setpoint_type: velocity = 3, acceleration = 4) 
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{offboard_setpoint_type: 1, max_duration_sec: 5.0}'"
->
-> # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
-> ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
->
-> # Gimbal status and position control (in radians)
-> ros2 topic echo /gimbal_state
-> ros2 topic pub -1 /gimbal_pitch_cmd std_msgs/msg/Float64 "{data: 1.57}"
-> ```
-> To analyze the flight logs in the `Simulation`'s Xterm terminal:
-> ```sh
-> /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
-> ```
->
-> To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_resources/missions/test_mission.yaml)
-> </details>
-> <details>
-> <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>
-> 
-> ```sh
-> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
-> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
-> ```
-> </details>
-> <details>
-> <summary><b>Develop within running containers</b> <i>(click to expand)</i></summary>
-> 
-> Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders `[aircraft|ground|simulation]_resources`, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
-> 
-> ```sh
-> cd aerial-autonomy-stack/tools_and_docs/
-> DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_resources/ and *_ws/src/ folders are mounted from the host
-> ```
-> 
-> To build changes—**made on the host**—in the `Ground` or `QUAD` Xterm terminal:
-> 
-> ```sh
-> cd /aas/aircraft_ws/                                                                        # Or cd /aas/ground_ws/
-> colcon build --symlink-install
-> ```
-> 
-> To start the simulation, in the `QUAD` Xterm terminal:
-> 
-> ```sh
-> tmuxinator start -p /aas/aircraft.yml.erb
-> ```
-> 
-> In the `Ground` Xterm terminal:
-> ```sh
-> tmuxinator start -p /aas/ground.yml.erb
-> ```
-> 
-> In the `Simulation` Xterm terminal:
-> ```sh
-> tmuxinator start -p /aas/simulation.yml.erb
-> ```
-> 
-> To end the simulation, in each terminal detach Tmux with `Ctrl + b`, then `d`; kill all lingering processes with `tmux kill-server && pkill -f gz`
-> </details>
-
-![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
-
-> `WORLD`s:
-> *(i)* `apple_orchard`, a GIS world created using [BlenderGIS](https://github.com/domlysz/BlenderGIS)
-> / *(ii)* `impalpable_greyness`, an empty world with simple shapes
-> / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
-> / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
-> / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin (see GIF below)
-
-## 3. Jetson Deployment
-
-```sh
-sudo apt update && sudo apt install -y git
-
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/tools_and_docs/
-
-./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
-```
-
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64">
-  </a>
-</div>
-
->[!NOTE]
-> AAS is tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB on an X650
->
-> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
-
-Start the `aircraft-image` on Jetson Orin NX:
-
-```sh
-cd aerial-autonomy-stack/tools_and_docs/
-AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh
-# The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
-
-# Deployment options:
-#     DRONE_TYPE=quad, vtol
-#     AUTOPILOT=px4, ardupilot
-#     DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#     HEADLESS/CAMERA/LIDAR=true, false
-```
-
-Start the `ground-image` on a laptop to connect QGC, Zenoh, SSH, and GStreamer:
-
-```sh
-cd aerial-autonomy-stack/tools_and_docs/
-./sim_build.sh                                        # Build all images for amd64, including ground-image
-GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
-```
-
-<details>
-<summary><b>Advanced Topic: HITL Simulation</b> <i>(click to expand)</i></summary>
-
-> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
-> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
-
-Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
-
-- One simulation computer, with IP `[SIM_SUBNET].90.100`
-- One ground computer, with IP `[SIM_SUBNET].90.101`
-- `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
-
-> **Optionally**, set up a second LAN :`AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
-> 
-> - One ground computer, with IP `[AIR_SUBNET].90.101`
-> - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
-
-First, start all aircraft containers, one on each Jetson (e.g. *via* SSH):
-```sh
-# On the Jetson with IPs ending in 90.1
-HITL=true DRONE_ID=1 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
-```
-
-```sh
-# On the Jetson with IPs ending in 90.2
-HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
-```
-
-Then, start the simulation:
-```sh
-# On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 ./sim_run.sh
-```
-
-Finally, start QGC and the Zenoh bridge:
-```sh
-# On the computer with IPs ending in 90.101
-HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
-```
-
-> **Note:** running only the first 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
-
-Once done, detach Tmux (and remove the containers) with `Ctrl + b`, then `d`
-</details>
-
-## 4. Gymnasium Environment
-
-<details>
-<summary>Using a Python <kbd>venv</kbd> or a <a href="https://docs.conda.io/projects/conda/en/stable/user-guide/install/linux.html"><kbd>conda</kbd></a> environment is optional but recommended <i>(click to expand)</i></summary>
-
-```sh
-wget https://repo.anaconda.com/archive/Anaconda3-2025.12-2-Linux-x86_64.sh # Or a newer version in https://repo.anaconda.com/archive/
-bash Anaconda3-2025.12-2-Linux-x86_64.sh              # Install; start a new terminal
-conda config --set auto_activate_base false           # Turn off auto initialization of (base); start a new terminal
-conda update --all -n base -c defaults                # Update to the latest conda version
-conda create -n aas python=3.12                       # Latest Python version beyond "bugfix" status https://devguide.python.org/versions/
-```
-</details>
-
-Install the `aas-gym` package (**after** completing the steps in ["Installation"](#1-installation)):
-```sh
-conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/aas-gym/
-pip3 install -e .
-```
-
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml/badge.svg" alt="aas-gym pip install">
-  </a>
-</div>
-
-Use with:
-```sh
-conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/tools_and_docs
-python3 gym_run.py --mode step                        # Manually step AAS @1Hz
-python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
-python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz
-```
-
-![waves](https://github.com/user-attachments/assets/fd757549-33bd-434d-aac6-665c255b7160)
 ---
 > You've done a man's job, sir. I guess you're through, huh?
 
