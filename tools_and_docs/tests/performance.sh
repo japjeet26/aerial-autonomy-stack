@@ -1,10 +1,26 @@
 #!/bin/bash
 
-# Adjust the configuratoin below as needed, then run with:
+# Adjust the configuration below as needed, then run with:
 # $ cd aerial-autonomy-stack/tools_and_docs/
 # $ conda activate aas
 # $ ./tests/performance.sh
 
+# (optional) CPU/GPU performance modes:
+# sudo cpupower frequency-set -g performance                      # Force CPU performance mode
+#   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor     # Check (does NOT persist across reboots)
+# sudo prime-select nvidia                                        # Force GPU use instead of on-demand
+#   prime-select query                                            # Check (persists across reboots)
+# sudo nvidia-smi -pm 1                                           # Prevent NVIDIA driver from going idle
+#   nvidia-smi --query-gpu=persistence_mode --format=csv,noheader # Check (does NOT persist across reboots)
+
+# Configuration (see also quad_counts below)
+MODES=("speedup" "vectorenv-speedup")
+AUTOPILOTS=("px4" "ardupilot")
+SENSOR_SCENARIOS=("both" "no_camera" "no_lidar" "none")
+REPETITIONS=1
+MAX_RETRIES=3
+
+# Check for conda environment
 if [[ "$CONDA_DEFAULT_ENV" != "aas" ]]; then
     echo "Error: The 'aas' conda environment is not active."
     echo "Please activate it with: conda activate aas"
@@ -14,13 +30,6 @@ fi
 # Find the script's path (and then gym_run.py script in tools_and_docs/)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 GYM_RUN_SCRIPT="$SCRIPT_DIR/../gym_run.py"
-
-# Configuration
-MODES=("speedup" "vectorenv-speedup")
-AUTOPILOTS=("px4" "ardupilot")
-SENSOR_SCENARIOS=("both" "no_camera" "no_lidar" "none")
-REPETITIONS=1
-MAX_RETRIES=3
 
 # Docker clean-up helper function
 cleanup_docker() {

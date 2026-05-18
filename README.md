@@ -43,11 +43,19 @@ git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-au
 ./sim_build.sh                                        # The 1st build takes ~40' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
 ```
 
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml/badge.svg" alt="aas build-and-test amd64">
-  </a>
-</div>
+<details>
+<summary><b>ghcr.io pre-built images</b> <i>(click to expand)</i>
+<a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml"><img align="right" src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-amd64-build-and-test.yml/badge.svg" alt="aas build-and-test amd64"></a>
+</summary>
+
+```sh
+# ghcr.io images are re-built from `main` every Friday night
+for name in aircraft ground simulation; do
+  docker pull ghcr.io/jacopopan/${name}-image:latest
+  docker tag ghcr.io/jacopopan/${name}-image:latest ${name}-image:latest
+done
+```
+</details>
 
 ## 2. Simulation
 
@@ -184,11 +192,7 @@ git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-au
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
 ```
 
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64">
-  </a>
-</div>
+<a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml"><img align="right" src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64"></a>
 
 On a Jetson Orin, start the `aircraft-image`:
 
@@ -281,11 +285,7 @@ cd aerial-autonomy-stack/aas-gym/
 pip3 install -e .
 ```
 
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml/badge.svg" alt="aas-gym pip install">
-  </a>
-</div>
+<a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml"><img align="right" src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml/badge.svg" alt="aas-gym pip install"></a>
 
 Examples:
 ```sh
@@ -457,34 +457,29 @@ aerial-autonomy-stack
 - [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
     - **TODO: test on JP 6.2.2 [L4T 36.5.0, Ubuntu 22-based]**
 - [x] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)
-    - **NOTE: `nvidia-driver-590` does not support the [presets in Ubuntu 22's GStreamer 1.20](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/deprecation-notices/index.html) and it requires updating the `amd64` base images to Ubuntu 24 or compiling [GStreamer 1.24](https://discourse.gstreamer.org/t/nvcodec-nvenc-nvidia-deprecates-support-for-old-videocodec-sdk-h-264-hevc-encoder-presets-with-driver-r550-in-q124/182) from source**
-    - **AAS sticks with `nvidia-driver-580` and Ubuntu 22 `amd64` base images for parity with the L4T 36.x, Ubuntu 22-based `arm64` base image**
-    - **TODO: test `nvidia-driver-595`**
 - [x] [Docker Engine v29](https://docs.docker.com/engine/release-notes/)
 - [x] [NVIDIA Container Toolkit 1.19](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
 - [x] `amd64` base image: [`cuda:12.9.1-cudnn-runtime-ubuntu22.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags)
-    - **NOTE: `onnxruntime-gpu` 1.23 does not support CUDA 13**
 - [x] `arm64`/Jetson base image: [`l4t-jetpack:r36.4.0`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-jetpack/tags)
 - [x] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
-    - **NOTE: latest DeepStream supported on Orin Series**
 - [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.16.2](https://github.com/PX4/PX4-Autopilot/releases)
 - [x] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
 - [x] [YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
-    - **NOTE: updating to 1.24 from wheel requires switching to Python >3.11/Ubuntu 24**
 
-Transitive constraints:
-```
-Jetson Orin only supports JetPack up to version 6
-  -> JetPack 6 is based on L4T 36 (Ubuntu 22)
-    -> Ubuntu 22's system Python is version 3.10
-      -> the last available ONNX Runtime wheel for Python 3.10 is version 1.23.2
-        -> ONNX Runtime 1.23.2 does not support CUDA 13
-    -> Ubuntu 22's GStreamer apt package is version 1.20
-      -> GStreamer 1.20's `nvh264enc preset` are no longer supported beyond `nvidia-driver-580`
-```
+Transitive constraints (as of May 2026):
+
+- > Jetson Orin supports [JetPack only up to version 6](https://developer.nvidia.com/embedded/jetpack-archive)
+  - JetPack 6/Orin latest supported DeepStream version is 7.1 (DS 8.0, 9.0 are on JetPack 7/Thor)
+  - JetPack 6 is based on L4T 36 (Ubuntu 22)
+    - > Ubuntu 22's system Python is version 3.10
+      - The last available ONNX Runtime GPU wheel for Python 3.10 is version 1.23.2 ([ORT 1.24+ is available on Python 3.11+](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
+        - > ONNX Runtime GPU 1.23.2 only supports CUDA 12 ([CUDA 13 support added in ORT 1.24.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
+          - The latest CUDA 12 on the [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags) is 12.9.1 (e.g., `cuda:12.9.1-cudnn-runtime-ubuntu22.04`)
+    - > Ubuntu 22's GStreamer `apt` package is version 1.20
+      - [GStreamer 1.20's `nvh264enc preset`s are no longer supported](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/deprecation-notices/index.html) beyond `nvidia-driver-580`; `nvidia-driver-595` requires [GStreamer 1.24](https://discourse.gstreamer.org/t/nvcodec-nvenc-nvidia-deprecates-support-for-old-videocodec-sdk-h-264-hevc-encoder-presets-with-driver-r550-in-q124/182), which is the default on Ubuntu 24
 
 External repositories:
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.16.2`
@@ -514,13 +509,7 @@ python3 gym_run.py --mode learn
 # debug
 docker exec -it simulation-container-inst0 tmux attach
 docker exec -it aircraft-container-inst0_1 tmux attach
-# clean-up
-docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
 ```
-
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information. Copyright (c) 2025 Jacopo Panerati
 
 ## Known Issues
 
@@ -531,6 +520,47 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
 - In ArdupilotInterface's action callbacks, std::shared_lock<std::shared_mutex> lock(node_data_mutex_); could be used on the reads of lat_, lon_, alt_
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
+
+## Docker Basics
+
+```sh
+# Stop and remove all containers and networks
+docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
+
+docker ps -a                          # List containers
+docker stop $(docker ps -q)           # Stop all containers
+docker container prune -f             # Remove all stopped containers
+
+docker network ls                     # List docker networks
+docker network rm <network_name>      # Remove a specific network
+docker network prune -f               # Remove all unused networks
+docker system df                      # Check disk usage by images and cache
+docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
+
+docker images                         # List images
+docker image prune                    # Remove untagged images
+docker rmi <image_name_or_id>         # Remove a specific image
+docker builder prune                  # Clear all dangling cache
+```
+
+## Tmux Shortcuts
+
+```sh
+tmux list-sessions                    # List all sessions
+tmux attach-session -t [session_name] # Reattach a session
+tmux kill-session -t [session_name]   # Kill a session
+tmux kill-server                      # Kill all sessions
+
+Ctrl + b, then n, p                   # Move between Tmux windows
+Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
+Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
+Space                                 # Start selecting when in copy mode (move with arrow keys)
+y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
+q                                     # Exit copy mode
+Ctrl + b, then "                      # Split a Tmux window horizontally
+Ctrl + b, then %                      # Split a Tmux window vertically
+Ctrl + b, then d                      # Detach Tmux
+```
 
 ## Future Work
 
@@ -556,54 +586,8 @@ Distributed under the MIT License. See `LICENSE.txt` for more information. Copyr
     - https://docs.px4.io/main/en/simulation/hitl
     - https://ardupilot.org/dev/docs/hitl-simulators.html
 
-## Cheatsheets and tips
+## License
 
-**Optionally**, force CPU/GPU performance modes
-```sh
-sudo cpupower frequency-set -g performance            # Force CPU performance mode
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor # Check (does NOT persist across reboots)
-
-sudo prime-select nvidia                              # Force GPU use instead of on-demand
-prime-select query                                    # Check (persists across reboots)
-
-sudo nvidia-smi -pm 1                                 # Prevent NVIDIA driver from going idle
-nvidia-smi --query-gpu=persistence_mode --format=csv,noheader # Check (does NOT persist across reboots)
-```
-
-Use Tmux shortcuts to navigate windows and panes in Xterm
-```sh
-Ctrl + b, then n, p                   # Move between Tmux windows
-Ctrl + b, then [arrow keys]           # Move between Tmux panes in a window (or use the mouse)
-Ctrl + [, then [arrow keys]           # Enter copy mode (to scroll back in a pane, or simply select-and-drag with the mouse to copy)
-Space                                 # Start selecting when in copy mode (move with arrow keys)
-y                                     # Yank/copy the selection to clipboard (paste with Ctrl + v or Ctrl + Shit + v)
-q                                     # Exit copy mode
-Ctrl + b, then "                      # Split a Tmux window horizontally
-Ctrl + b, then %                      # Split a Tmux window vertically
-Ctrl + b, then d                      # Detach Tmux
-
-tmux list-sessions                    # List all sessions
-tmux attach-session -t [session_name] # Reattach a session
-tmux kill-session -t [session_name]   # Kill a session
-tmux kill-server                      # Kill all sessions
-```
-
-Periodically run Docker cleanups
-```sh
-docker ps -a                          # List containers
-docker stop $(docker ps -q)           # Stop all containers
-docker container prune -f             # Remove all stopped containers
-
-docker network ls                     # List docker networks
-docker network rm <network_name>      # Remove a specific network
-docker network prune -f               # Remove all unused networks
-docker system df                      # Check disk usage by images and cache
-docker system prune                   # Remove stopped containers, unused networks and cache, dangling images
-
-docker images                         # List images
-docker image prune                    # Remove untagged images
-docker rmi <image_name_or_id>         # Remove a specific image
-docker builder prune                  # Clear all dangling cache
-```
+Distributed under the MIT License. See `LICENSE.txt` for more information. Copyright (c) 2025 Jacopo Panerati
 
 -->
