@@ -464,9 +464,10 @@ aerial-autonomy-stack
 - [x] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
 - [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
-- [x] [PX4 1.16.2](https://github.com/PX4/PX4-Autopilot/releases)
+- [ ] [PX4 1.16.2](https://github.com/PX4/PX4-Autopilot/releases)
+    - **TODO: update to 1.17.0**
 - [x] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
-- [x] [YOLO26](https://github.com/ultralytics/ultralytics/releases)
+- [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
 
 Transitive constraints (as of May 2026):
