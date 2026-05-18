@@ -1,7 +1,7 @@
 FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 AS base_amd64
 FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
 ################################################################################
-# Stage 1 - 8GB ################################################################
+# Stage 1 ######################################################################
 ################################################################################
 FROM base_${TARGETARCH} AS ros2-image
 
@@ -47,7 +47,7 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 RUN rosdep init
 
 ################################################################################
-# Stage 2 - 8GB ################################################################
+# Stage 2 ######################################################################
 ################################################################################
 FROM ros2-image AS ros2-px4msgs-image
 
@@ -60,7 +60,7 @@ RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
 
 ################################################################################
-# Stage 3 - 8.5GB ##############################################################
+# Stage 3 ######################################################################
 ################################################################################
 FROM ros2-px4msgs-image AS ros2-px4msgs-dds-image
 
@@ -76,7 +76,7 @@ RUN mkdir build && cd build && \
 # Run with $ MicroXRCEAgent udp4 -p 8888
 
 ################################################################################
-# Stage 4 - 8.5GB ##############################################################
+# Stage 4 ######################################################################
 ################################################################################
 FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
@@ -89,7 +89,7 @@ RUN /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################
-# Stage 5 - 15GB ###############################################################
+# Stage 5 ######################################################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 
@@ -199,7 +199,7 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
-# Stage 6 - 16GB ###############################################################
+# Stage 6 ######################################################################
 ################################################################################
 FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
@@ -218,7 +218,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 ################################################################################
-# Stage 7 - 16+GB ##############################################################
+# Stage 7 ######################################################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image
 
@@ -244,7 +244,7 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
     rm yolo26n.pt
 
 ################################################################################
-# Stage 8 - 16+GB ##############################################################
+# Stage 8 ######################################################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image AS aircraft-dev-image
 

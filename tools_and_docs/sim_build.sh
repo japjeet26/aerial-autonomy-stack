@@ -95,13 +95,9 @@ fi
 unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
 if [ "$BUILD_DOCKER" = "true" ]; then
-  # The first build takes ~15' and creates a 21GB image (8GB for ros-humble-desktop with nvidia runtime, 10GB for PX4 and ArduPilot SITL)
+  # The first build takes ~45' and ~70GB of disk usage (~23GB of content size)
   docker build $BUILD_ARGS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
-
-  # The first build takes <5' and creates an 9GB image (8GB for ros-humble-desktop with nvidia runtime)
   docker build $BUILD_ARGS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
-
-  # The first build takes ~10' and creates an 18GB image (8GB for ros-humble-desktop with nvidia runtime, 7GB for YOLO, ONNX)
   docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 else
   echo -e "Skipping Docker builds"

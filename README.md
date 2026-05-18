@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-autonomy-stack/tools_and_docs/
 ./tests/check_requirements.sh                         # AAS requires nvidia-driver-580, docker, and nvidia-container-toolkit
-./sim_build.sh                                        # The 1st build takes ~40' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
+./sim_build.sh                                        # The 1st build takes ~45' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
 ```
 
 <details>
@@ -65,7 +65,7 @@ On one terminal, start AAS:
 
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
-AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30-40s of simulated time before being ready to arm)
+AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 ```
 
 On another terminal, fly all drones:
