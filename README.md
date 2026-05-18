@@ -471,14 +471,14 @@ aerial-autonomy-stack
 
 Transitive constraints (as of May 2026):
 
-- > Jetson Orin supports [JetPack only up to version 6](https://developer.nvidia.com/embedded/jetpack-archive)
+- Jetson Orin supports [JetPack only up to version 6](https://developer.nvidia.com/embedded/jetpack-archive)
   - JetPack 6/Orin latest supported DeepStream version is 7.1 (DS 8.0, 9.0 are on JetPack 7/Thor)
   - JetPack 6 is based on L4T 36 (Ubuntu 22)
-    - > Ubuntu 22's system Python is version 3.10
+    - Ubuntu 22's system Python is version 3.10
       - The last available ONNX Runtime GPU wheel for Python 3.10 is version 1.23.2 ([ORT 1.24+ is available on Python 3.11+](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
-        - > ONNX Runtime GPU 1.23.2 only supports CUDA 12 ([CUDA 13 support added in ORT 1.24.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
+        - ONNX Runtime GPU 1.23.2 only supports CUDA 12 ([CUDA 13 added in ORT 1.24.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
           - The latest CUDA 12 on the [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags) is 12.9.1 (e.g., `cuda:12.9.1-cudnn-runtime-ubuntu22.04`)
-    - > Ubuntu 22's GStreamer `apt` package is version 1.20
+    - Ubuntu 22's GStreamer `apt` package is version 1.20
       - [GStreamer 1.20's `nvh264enc preset`s are no longer supported](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/deprecation-notices/index.html) beyond `nvidia-driver-580`; `nvidia-driver-595` requires [GStreamer 1.24](https://discourse.gstreamer.org/t/nvcodec-nvenc-nvidia-deprecates-support-for-old-videocodec-sdk-h-264-hevc-encoder-presets-with-driver-r550-in-q124/182), which is the default on Ubuntu 24
 
 External repositories:
