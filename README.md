@@ -574,6 +574,10 @@ Ctrl + b, then d                      # Detach Tmux
 
 ### Potential for technical spikes/long-term, nice-to-have features
 
+- Develop a "radar" sensor model for Gazebo sim starting from the GpuLidarSensor model
+    - https://gazebosim.org/libs/sensors/
+    - https://github.com/gazebosim/gz-sensors/blob/main/src/GpuLidarSensor.cc
+    - Integrate radar-inertial odometry (e.g, https://github.com/utiasASRL/steam_icp)
 - Integrate a GIS world generator (e.g., Cesium)
     - https://github.com/CesiumGS/cesium-native
 - Integrate a photorealistic simulator (e.g., IsaacSim)
